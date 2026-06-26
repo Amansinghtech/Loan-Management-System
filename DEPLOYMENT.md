@@ -74,11 +74,17 @@ MONGODB_URI="<atlas-uri>" SEED_PASSWORD="<your-password>" npm run seed
 1. Vercel → **Add New** → **Project** → import this repository.
 2. **Root Directory:** `frontend` (important — this is a monorepo).
 3. Framework preset auto-detects **Next.js**. Leave build/output defaults.
-4. Add an environment variable:
+4. Add environment variables:
 
    | Variable | Value |
    |---|---|
-   | `NEXT_PUBLIC_API_URL` | `https://<your-render-service>.onrender.com/api` |
+   | `NEXT_PUBLIC_API_URL` | `/api` (the browser calls the app's own origin) |
+   | `BACKEND_ORIGIN` | `https://<your-render-service>.onrender.com` |
+
+   The frontend never calls Render directly from the browser. Next proxies
+   `/api/*` to `BACKEND_ORIGIN` (see `frontend/next.config.mjs`), which keeps the
+   auth cookie **first-party** with the Vercel domain — so the Edge middleware can
+   read it and there are no cross-site cookie/CORS problems.
 
 5. Deploy. Copy the resulting URL (e.g. `https://lendflow.vercel.app`).
 
@@ -86,14 +92,15 @@ MONGODB_URI="<atlas-uri>" SEED_PASSWORD="<your-password>" npm run seed
 
 ## 4. Wire the two together
 
-1. Back on Render, set `CLIENT_ORIGIN` to the Vercel URL (no trailing slash).
-   To also allow Vercel preview deployments, use a comma-separated list:
-   ```
-   CLIENT_ORIGIN=https://lendflow.vercel.app,https://lendflow-git-main-you.vercel.app
-   ```
-2. Trigger a redeploy of the backend so the new CORS origin takes effect.
-3. Visit the Vercel URL and log in. The auth cookie is issued by Render as
-   `SameSite=None; Secure` and the browser will send it on API calls.
+1. On Vercel, confirm `BACKEND_ORIGIN` points at your Render service URL and
+   `NEXT_PUBLIC_API_URL` is `/api`. Redeploy the frontend if you changed them.
+2. On Render, keep `COOKIE_SECURE=true` so the auth cookie is `Secure` (required
+   over HTTPS). Because the browser only ever talks to the Vercel origin (Next
+   proxies to Render server-side), the cookie is first-party and `CLIENT_ORIGIN`
+   CORS config is no longer on the critical path — but it's still good to set it
+   to the Vercel URL for any direct API access.
+3. Visit the Vercel URL and log in. The cookie is stored for the Vercel domain,
+   so it survives refresh and the middleware-based route guards work.
 
 ---
 

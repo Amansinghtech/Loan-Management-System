@@ -10,8 +10,26 @@ A full-stack lending platform where borrowers apply for loans through a guided, 
 
 ---
 
+## Live demo
+
+| Service | URL |
+| --- | --- |
+| **Web app** (frontend) | https://lend-flow-fe.vercel.app/ |
+| **API docs** (Swagger UI) | https://lms-backend-9bts.onrender.com/api/docs/ |
+| **API base URL** | `https://lms-backend-9bts.onrender.com/api` |
+| **Health check** | https://lms-backend-9bts.onrender.com/api/health |
+
+> The backend runs on Render's free tier, so the first request after a period of
+> inactivity may take ~30–60s while the instance wakes up. Subsequent requests are fast.
+
+Sign in with any of the [seeded accounts](#seeded-login-credentials) to explore the
+borrower portal and the role-guarded operations dashboard.
+
+---
+
 ## Table of contents
 
+- [Live demo](#live-demo)
 - [Features](#features)
 - [Architecture](#architecture)
 - [Project structure](#project-structure)
@@ -159,7 +177,13 @@ Frontend `.env.local`:
 
 | Variable | Description |
 | --- | --- |
-| `NEXT_PUBLIC_API_URL` | Base URL of the backend API, e.g. `http://localhost:5000/api` |
+| `NEXT_PUBLIC_API_URL` | Path the browser calls; leave as `/api` (proxied to the backend) |
+| `BACKEND_ORIGIN` | Origin Next proxies `/api/*` to, e.g. `http://localhost:5000` |
+
+> The frontend calls its **own** origin under `/api`; Next.js rewrites
+> (`next.config.mjs`) proxy those requests to `BACKEND_ORIGIN`. This keeps the
+> JWT cookie first-party with the frontend domain, so the Edge middleware can
+> read it in production (where the API lives on a different host).
 
 > **R2 note:** uploads/views call R2 directly. If you only want to demo the loan flow without R2, the seed script attaches a placeholder slip reference to sample loans so every dashboard module has data. To exercise real uploads, configure the `R2_*` variables.
 
