@@ -46,7 +46,9 @@ The repo ships a [`render.yaml`](./render.yaml) Blueprint.
 ### Option B — Manual web service
 
 - **Root Directory:** `backend`
-- **Build Command:** `npm install && npm run build`
+- **Build Command:** `npm install --include=dev && npm run build`
+  (the `--include=dev` flag is required because `NODE_ENV=production` otherwise
+  skips the TypeScript compiler and `@types/*` packages needed to build)
 - **Start Command:** `npm start`
 - **Health Check Path:** `/api/health`
 - Add all env vars from [`backend/.env.example`](./backend/.env.example), with
