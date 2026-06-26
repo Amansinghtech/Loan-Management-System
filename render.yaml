@@ -1,0 +1,45 @@
+# Render Blueprint for the LMS backend (Express + TypeScript API).
+# Deploy: Render Dashboard -> New -> Blueprint -> point at this repo.
+# The frontend is deployed separately on Vercel (see DEPLOYMENT.md).
+services:
+  - type: web
+    name: lms-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Required so the cross-site auth cookie is sent as SameSite=None; Secure.
+      - key: COOKIE_SECURE
+        value: "true"
+      # JWT signing secret — generated once by Render and kept stable.
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      # Comma-separated allow-list of frontend origins (Vercel prod + previews).
+      # Set after the Vercel deploy, e.g. https://lendflow.vercel.app
+      - key: CLIENT_ORIGIN
+        sync: false
+      # MongoDB Atlas connection string.
+      - key: MONGODB_URI
+        sync: false
+      # Cloudflare R2 (S3-compatible) credentials.
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET
+        sync: false
+      - key: R2_ENDPOINT
+        sync: false
+      # Password assigned to seeded executive accounts (run `npm run seed` once).
+      - key: SEED_PASSWORD
+        sync: false
