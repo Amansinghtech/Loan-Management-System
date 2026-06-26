@@ -3,13 +3,16 @@ import { authenticate } from '../../middleware/auth';
 import { requireRole } from '../../middleware/rbac';
 import { Role } from '../../types';
 import { asyncHandler } from '../../utils/asyncHandler';
-import { listAllPayments, listLoans, salesLeads } from './ops.controller';
+import { getStats, listAllPayments, listLoans, salesLeads } from './ops.controller';
 
 const router = Router();
 
 router.use(authenticate);
 
 router.get('/sales/leads', requireRole(Role.SALES), asyncHandler(salesLeads));
+
+// Admin KPI summary (admin auto-passes requireRole; no other role is allowed).
+router.get('/stats', requireRole(Role.ADMIN), asyncHandler(getStats));
 
 // Loan lists are read by every executive module (and admin); the controller
 // returns whatever status filter is requested.

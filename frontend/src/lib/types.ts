@@ -94,6 +94,15 @@ export interface Lead {
   createdAt: string;
 }
 
+export interface Stats {
+  borrowers: number;
+  loans: number;
+  byStatus: Record<LoanStatus, number>;
+  disbursedAmount: number;
+  collected: number;
+  outstanding: number;
+}
+
 export interface BreFailure {
   rule: 'AGE' | 'SALARY' | 'PAN' | 'EMPLOYMENT';
   message: string;

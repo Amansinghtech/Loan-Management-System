@@ -1,7 +1,7 @@
 'use client';
 
 import { api } from '@/lib/api';
-import { Lead, Loan, PaymentListItem, User } from '@/lib/types';
+import { Lead, Loan, PaymentListItem, Stats, User } from '@/lib/types';
 import { useQuery } from '@tanstack/react-query';
 
 export function useOpsLoans(status: string) {
@@ -46,4 +46,15 @@ export function useAllPayments() {
 /** A populated ref on a payment row resolves to its object, or null when unpopulated. */
 export function refOf<T>(value: T | string | null): T | null {
   return typeof value === 'object' && value !== null ? (value as T) : null;
+}
+
+/** Admin-only portfolio KPI summary. */
+export function useStats() {
+  return useQuery({
+    queryKey: ['stats'],
+    queryFn: async () => {
+      const { data } = await api.get<{ stats: Stats }>('/ops/stats');
+      return data.stats;
+    },
+  });
 }

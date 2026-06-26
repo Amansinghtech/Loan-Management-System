@@ -1,8 +1,8 @@
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+  return twMerge(clsx(inputs))
 }
 
 export function formatINR(value: number): string {
@@ -10,7 +10,7 @@ export function formatINR(value: number): string {
     style: 'currency',
     currency: 'INR',
     maximumFractionDigits: 2,
-  }).format(value);
+  }).format(value)
 }
 
 export function formatDate(value: string | Date): string {
@@ -18,5 +18,5 @@ export function formatDate(value: string | Date): string {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
-  });
+  })
 }

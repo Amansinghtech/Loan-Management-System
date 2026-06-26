@@ -62,6 +62,71 @@ export async function listLoans(req: Request, res: Response): Promise<void> {
 }
 
 /**
+ * Admin KPI summary for the dashboard: portfolio counts, status breakdown and
+ * money movement (disbursed / collected / outstanding). Computed with a couple
+ * of aggregations rather than loading every document.
+ */
+export async function getStats(_req: Request, res: Response): Promise<void> {
+  const [statusAgg, money, borrowers] = await Promise.all([
+    Loan.aggregate<{ _id: LoanStatus; count: number }>([
+      { $group: { _id: '$status', count: { $sum: 1 } } },
+    ]),
+    Loan.aggregate<{
+      _id: null;
+      loans: number;
+      collected: number;
+      disbursedAmount: number;
+      outstanding: number;
+    }>([
+      {
+        $group: {
+          _id: null,
+          loans: { $sum: 1 },
+          collected: { $sum: '$amountPaid' },
+          disbursedAmount: {
+            $sum: {
+              $cond: [{ $in: ['$status', [LoanStatus.DISBURSED, LoanStatus.CLOSED]] }, '$amount', 0],
+            },
+          },
+          outstanding: {
+            $sum: {
+              $cond: [
+                { $eq: ['$status', LoanStatus.DISBURSED] },
+                { $subtract: ['$totalRepayment', '$amountPaid'] },
+                0,
+              ],
+            },
+          },
+        },
+      },
+    ]),
+    User.countDocuments({ role: Role.BORROWER }),
+  ]);
+
+  const byStatus = Object.values(LoanStatus).reduce(
+    (acc, status) => {
+      acc[status] = statusAgg.find((s) => s._id === status)?.count ?? 0;
+      return acc;
+    },
+    {} as Record<LoanStatus, number>,
+  );
+
+  const totals = money[0] ?? { loans: 0, collected: 0, disbursedAmount: 0, outstanding: 0 };
+  const round = (n: number): number => Math.round((n + Number.EPSILON) * 100) / 100;
+
+  res.json({
+    stats: {
+      borrowers,
+      loans: totals.loans,
+      byStatus,
+      disbursedAmount: round(totals.disbursedAmount),
+      collected: round(totals.collected),
+      outstanding: round(totals.outstanding),
+    },
+  });
+}
+
+/**
  * Returns the full repayment ledger across all loans, each row enriched with the
  * loan's application number/status, the borrower, and who recorded it. Used by
  * the Collection and Admin dashboards. Admin passes via requireRole automatically.

@@ -1,7 +1,9 @@
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express, { Application, Request, Response } from 'express';
+import swaggerUi from 'swagger-ui-express';
 import { env } from './config/env';
+import { openapiSpec } from './docs/openapi';
 import { errorHandler, notFoundHandler } from './middleware/error';
 import authRoutes from './modules/auth/auth.routes';
 import borrowerRoutes from './modules/borrower/borrower.routes';
@@ -38,6 +40,18 @@ export function createApp(): Application {
   app.get('/api/health', (_req: Request, res: Response) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
+
+  // Interactive API docs (Swagger UI) + the raw OpenAPI document.
+  app.get('/api/docs.json', (_req: Request, res: Response) => {
+    res.json(openapiSpec);
+  });
+  app.use(
+    '/api/docs',
+    swaggerUi.serve,
+    swaggerUi.setup(openapiSpec as unknown as swaggerUi.JsonObject, {
+      customSiteTitle: 'LendFlow LMS API Docs',
+    }),
+  );
 
   app.use('/api/auth', authRoutes);
   app.use('/api/borrower', borrowerRoutes);
