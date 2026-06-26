@@ -7,11 +7,9 @@ import { Label } from '@/components/ui/label';
 import { useAuthActions } from '@/hooks/useAuth';
 import { api, getApiErrorMessage } from '@/lib/api';
 import { Role, User } from '@/lib/types';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Suspense } from 'react';
-import { useForm } from 'react-hook-form';
+import { FormEvent, Suspense, useState } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
@@ -19,7 +17,6 @@ const schema = z.object({
   email: z.string().email('Enter a valid email'),
   password: z.string().min(1, 'Password is required'),
 });
-type FormValues = z.infer<typeof schema>;
 
 export default function LoginPage() {
   return (
@@ -33,15 +30,30 @@ function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const { setUser } = useAuthActions();
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema) });
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  async function onSubmit(values: FormValues) {
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    // Read values straight from the DOM so browser-autofilled inputs are
+    // captured even when they don't fire React change events.
+    const form = new FormData(event.currentTarget);
+    const candidate = {
+      email: String(form.get('email') ?? '').trim(),
+      password: String(form.get('password') ?? ''),
+    };
+
+    const parsed = schema.safeParse(candidate);
+    if (!parsed.success) {
+      const fieldErrors = parsed.error.flatten().fieldErrors;
+      setErrors({ email: fieldErrors.email?.[0], password: fieldErrors.password?.[0] });
+      return;
+    }
+    setErrors({});
+
+    setIsSubmitting(true);
     try {
-      const { data } = await api.post<{ user: User }>('/auth/login', values);
+      const { data } = await api.post<{ user: User }>('/auth/login', parsed.data);
       setUser(data.user);
       toast.success(`Welcome back, ${data.user.name}`);
       const next = params.get('next');
@@ -49,6 +61,8 @@ function LoginForm() {
       router.replace(next ?? fallback);
     } catch (err) {
       toast.error(getApiErrorMessage(err, 'Login failed'));
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -59,23 +73,16 @@ function LoginForm() {
         <CardDescription>Access your borrower portal or operations dashboard.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={onSubmit} className="space-y-4" noValidate>
           <div className="space-y-1.5">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" autoComplete="email" {...register('email')} />
-            {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+            <Input id="email" name="email" type="email" autoComplete="email" />
+            {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              {...register('password')}
-            />
-            {errors.password && (
-              <p className="text-xs text-destructive">{errors.password.message}</p>
-            )}
+            <Input id="password" name="password" type="password" autoComplete="current-password" />
+            {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
           </div>
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting ? 'Logging in...' : 'Log in'}
